@@ -1,26 +1,22 @@
 from fastapi import FastAPI, Request, HTTPException
-from app.solver import solve_quiz
-
-EXPECTED_SECRET = "z1F9@8qW4r"
+from solver import QuizSolver
+from settings import settings
+import asyncio
 
 app = FastAPI()
 
 @app.post("/")
-async def handle(req: Request):
-    try:
-        payload = await req.json()
-        print("PAYLOAD RECEIVED:", payload)
-    except:
-        raise HTTPException(400, "Invalid JSON")
+async def solve(request: Request):
+    body = await request.json()
 
-    if payload.get("secret") != EXPECTED_SECRET:
-        raise HTTPException(403, "Invalid secret")
+    if body["secret"] != settings.SECRET:
+        raise HTTPException(403)
 
-    email = payload.get("email")
-    url = payload.get("url")
+    solver = QuizSolver()
+    asyncio.create_task(solver.solve(body["url"]))
 
-    if not email or not url:
-        raise HTTPException(400, "Missing required fields")
+    return {"status": "accepted"}
 
-    result = solve_quiz(url, email, payload["secret"])
-    return result
+@app.get("/health")
+def health():
+    return {"ok": True}
